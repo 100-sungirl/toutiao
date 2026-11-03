@@ -1,0 +1,16 @@
+[
+  {"question": "京东 iPhone 17 Pro 的价格是多少？", "reference": "京东 iPhone 17 Pro 低至 7459 元起，iPhone 18 Pro 系列以旧换新可获 800 元换新补贴。"},
+  {"question": "华尔街为什么看好 Meta？", "reference": "Meta 股价累计上涨超 20%，华尔街分析师看好其智能体 Muse。"},
+  {"question": "Beats 360 头戴式耳机的售价和特点是什么？", "reference": "苹果 Beats 发布全新 Beats 360 头戴式真无线耳机，采用可换耳罩设计，售价 2999 元。"},
+  {"question": "梅赛德斯-奔驰在自动驾驶上和谁合作？", "reference": "梅赛德斯-奔驰与英国初创公司 Wayve 达成合作，未来两年内至少推出一款自动驾驶车型。"},
+  {"question": "微软新一轮裁员涉及什么业务？", "reference": "微软启动新一轮裁员，开启 XBOX 重整新阶段：整合多家工作室，下一部《光环》交给动视开发。"},
+  {"question": "Steam 最新一周游戏销量榜第一名是什么？", "reference": "Steam 新一周游戏销量榜中《战狗》连续夺冠，《EA SPORTS FC 27》紧随其后。"},
+  {"question": "已知最年轻的行星是哪颗？", "reference": "天文学家发现了已知最年轻的行星 Elias 2-24 b，这颗行星不到 100 万年历史，是一颗木星大小的行星。"},
+  {"question": "OPPO Find X10 E 手机的售价和芯片是什么？", "reference": "OPPO Find X10 E 手机售价 4999 元起，搭载天玑 9500s 芯片。"},
+  {"question": "宁德时代在匈牙利建了什么工厂？", "reference": "宁德时代海外最大生产基地——匈牙利电池工厂启动电芯试生产。"},
+  {"question": "赛力斯张兴海怎么回应与华为分手的传闻？", "reference": "张兴海首度回应称与华为没有分手，一直都在一起，今后也在一起。"},
+  {"question": "岚图梦想家 9 的价格区间是多少？", "reference": "岚图梦想家 9 上市，售价 41.99 万至 52.99 万元，定位新时代旗舰 MPV。"},
+  {"question": "依视路发布的智能眼镜有什么特别功能？", "reference": "依视路陆逊梯卡发布 Nuance Audio Plus 智能眼镜，可当助听器使用。"},
+  {"question": "OPPO 的 AI 心力球是做什么的？", "reference": "OPPO 推出 AI 心力球可穿戴新品，主打 AI 成长教练功能，体验价 499 元。"},
+  {"question": "Adobe Premiere 移动版现在支持什么平台？", "reference": "Adobe Premiere 移动版登陆谷歌 Play 商店，安卓手机也能用 Pr 剪辑视频了。"}
+]

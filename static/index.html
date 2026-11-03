@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今日热点 - 新闻系统</title>
+    <link rel="stylesheet" href="/style.css">
+    <script src="/vendor/vue.global.prod.js"></script>
+</head>
+
+<body>
+    <div id="app" v-cloak>
+
+        <!-- 顶栏 -->
+        <header class="topbar">
+            <div class="topbar-inner">
+                <div class="logo" @click="go('#/')">今日<span class="logo-red">热点</span></div>
+                <nav class="nav-tabs">
+                    <a :class="{active: route==='home'}" @click="go('#/')">首页</a>
+                    <a :class="{active: route==='chat'}" @click="go('#/chat')">AI 对话</a>
+                    <a :class="{active: route==='mine'}" @click="go('#/mine')">我的</a>
+                </nav>
+                <div class="search-box">
+                    <input v-model="searchWord" placeholder="语义搜索:试试「量子计算进展」" @keyup.enter="doSearch">
+                    <button @click="doSearch">搜索</button>
+                </div>
+                <div class="user-area">
+                    <template v-if="user">
+                        <span class="username">{{ user.username }}</span>
+                        <a class="logout" @click="logout">退出</a>
+                    </template>
+                    <button v-else class="btn-login" @click="showLogin=true">登录 / 注册</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- 首页 -->
+        <main v-if="route==='home'" class="container">
+            <div class="main-col">
+                <!-- 分类tab -->
+                <div class="cat-tabs">
+                    <a v-for="c in categories" :key="c.id" :class="{active: currentCat===c.id}"
+                        @click="selectCat(c.id)">{{ c.name }}</a>
+                </div>
+                <!-- 搜索结果 -->
+                <template v-if="searchResults">
+                    <div class="section-title">「{{ searchWord }}」的语义搜索结果
+                        <a class="link" @click="clearSearch">清除</a>
+                    </div>
+                    <div v-if="!searchResults.length" class="empty">没有找到相关新闻</div>
+                    <article v-for="n in searchResults" :key="n.news_id" class="news-card"
+                        @click="openDetail(n.news_id)">
+                        <div class="news-body">
+                            <h3>{{ n.title }}</h3>
+                            <div class="meta"><span>{{ n.author }}</span><span class="score">相关度 {{
+                                    (n.score*100).toFixed(0) }}%</span></div>
+                        </div>
+                    </article>
+                </template>
+                <!-- 推荐tab -->
+                <template v-else-if="currentCat==='recommend'">
+                    <div class="section-title">为你推荐
+                        <a class="link" @click="loadRecommend">换一批</a>
+                    </div>
+                    <div v-if="!user" class="empty">登录后可基于浏览历史个性化推荐,当前展示热点兜底</div>
+                    <div v-if="!recommend.length" class="empty">暂无推荐,先去浏览几篇新闻吧</div>
+                    <article v-for="n in recommend" :key="n.news_id || n.id" class="news-card"
+                        @click="openDetail(n.news_id || n.id)">
+                        <div class="news-body">
+                            <h3>{{ n.title }}</h3>
+                            <div class="meta"><span>{{ n.author }}</span><span v-if="n.description">{{
+                                    n.description.slice(0,50) }}</span></div>
+                        </div>
+                    </article>
+                </template>
+                <!-- 普通新闻列表 -->
+                <template v-else>
+                    <div v-if="!newsList.length && !loading" class="empty">该分类暂无新闻</div>
+                    <article v-for="n in newsList" :key="n.id" class="news-card" @click="openDetail(n.id)">
+                        <div class="news-body">
+                            <h3>{{ n.title }}</h3>
+                            <p class="desc">{{ n.description }}</p>
+                            <div class="meta">
+                                <span>{{ n.author }}</span>
+                                <span>{{ fmtTime(n.publish_time) }}</span>
+                                <span>{{ n.views }} 阅读</span>
+                            </div>
+                        </div>
+                        <img v-if="n.image" class="news-img" :src="n.image" @error="e=>e.target.style.display='none'">
+                    </article>
+                    <button v-if="hasMore" class="btn-more" @click="loadMore">加载更多</button>
+                </template>
+            </div>
+
+            <aside class="side-col">
+                <div class="panel">
+                    <div class="panel-title">🔥 实时热搜</div>
+                    <ol class="hot-list">
+                        <li v-for="(h,idx) in hotList" :key="h.id || h.news_id" @click="openDetail(h.id || h.news_id)">
+                            <em :class="'no'+(idx+1)">{{ idx+1 }}</em>{{ h.title }}
+                        </li>
+                        <li v-if="!hotList.length" class="empty">暂无数据</li>
+                    </ol>
+                </div>
+            </aside>
+        </main>
+
+        <!-- 详情页 -->
+        <main v-if="route==='detail'" class="container">
+            <div class="main-col detail">
+                <div v-if="detailLoading" class="empty">加载中...</div>
+                <template v-else-if="detail">
+                    <h1 class="detail-title">{{ detail.title }}</h1>
+                    <div class="detail-meta">
+                        <span>{{ detail.author }}</span>
+                        <span>{{ fmtTime(detail.publish_time) }}</span>
+                        <span>{{ detail.views }} 阅读</span>
+                        <button class="btn-fav" :class="{faved: isFav}" @click="toggleFav">{{ isFav ? '★ 已收藏' : '☆ 收藏'
+                            }}</button>
+                        <button class="btn-ask" @click="askAiAbout">🤖 问AI这篇</button>
+                    </div>
+                    <!-- AI摘要 -->
+                    <div v-if="detail.summary" class="ai-summary">
+                        <div class="ai-summary-head">✨ AI 摘要</div>
+                        <p>{{ detail.summary }}</p>
+                        <div v-if="detail.tags" class="tags">
+                            <span v-for="t in detail.tags.split(',')" :key="t">#{{ t.trim() }}</span>
+                        </div>
+                    </div>
+                    <img v-if="detail.image" class="detail-img" :src="detail.image"
+                        @error="e=>e.target.style.display='none'">
+                    <div class="detail-content">{{ detail.content }}</div>
+
+                    <div v-if="detail.related_news && detail.related_news.length" class="related">
+                        <div class="section-title">相关新闻</div>
+                        <article v-for="r in detail.related_news" :key="r.id" class="news-card"
+                            @click="openDetail(r.id)">
+                            <div class="news-body">
+                                <h3>{{ r.title }}</h3>
+                                <div class="meta"><span>{{ r.author }}</span><span>{{ r.views }} 阅读</span></div>
+                            </div>
+                        </article>
+                    </div>
+                </template>
+                <div v-else class="empty">新闻不存在</div>
+            </div>
+        </main>
+
+        <!-- AI对话页 -->
+        <main v-if="route==='chat'" class="chat-page">
+            <aside class="chat-side">
+                <button class="btn-new-session" @click="newSession">＋ 新会话</button>
+                <div v-for="s in sessions" :key="s.session_id" class="session-item"
+                    :class="{active: currentSession===s.session_id}" @click="openSession(s.session_id)">
+                    <span class="s-title">{{ s.title }}</span>
+                    <em class="s-del" @click.stop="delSession(s.session_id)">✕</em>
+                </div>
+            </aside>
+            <section class="chat-main">
+                <div class="chat-msgs" ref="msgsBox">
+                    <div v-if="!messages.length" class="chat-welcome">
+                        <h2>🤖 新闻 AI 助手</h2>
+                        <p>基于站内 483 篇新闻的 RAG 问答,回答附带引用来源</p>
+                        <div class="chat-suggestions">
+                            <button @click="sendMsg('最近有什么科技大新闻?')">最近有什么科技大新闻?</button>
+                            <button @click="sendMsg('量子计算领域有什么进展?')">量子计算领域有什么进展?</button>
+                            <button @click="sendMsg('帮我总结一下AI行业的动态')">总结AI行业动态</button>
+                        </div>
+                    </div>
+                    <div v-for="(m,idx) in messages" :key="idx" class="msg" :class="m.role">
+                        <div class="bubble">
+                            <div v-if="m.role==='assistant' && m.sources && m.sources.length" class="msg-sources">
+                                📎 引用: <a v-for="s in m.sources" :key="s.news_id" @click="openDetail(s.news_id)">{{
+                                    s.title }}</a>
+                            </div>
+                            <div class="msg-text">{{ m.content }}<span v-if="m.streaming" class="cursor">▌</span></div>
+                            <div v-if="m.role==='assistant' && m.msgId && !m.streaming" class="msg-actions">
+                                <button :class="{on: m.rating===1}" @click="rate(idx,1)">👍</button>
+                                <button :class="{on: m.rating===-1}" @click="rate(idx,-1)">👎</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <input v-model="chatInput" placeholder="输入问题,回车发送" @keyup.enter="sendMsg()">
+                    <button :disabled="chatting" @click="sendMsg()">发送</button>
+                </div>
+            </section>
+        </main>
+
+        <!-- 我的 -->
+        <main v-if="route==='mine'" class="container">
+            <div class="main-col">
+                <div class="cat-tabs">
+                    <a :class="{active: mineTab==='fav'}" @click="mineTab='fav'">我的收藏</a>
+                    <a :class="{active: mineTab==='history'}" @click="mineTab='history'">浏览历史</a>
+                    <a :class="{active: mineTab==='sources'}" @click="mineTab='sources'">新闻源管理</a>
+                </div>
+                <div v-if="!user" class="empty">请先登录</div>
+                <template v-else-if="mineTab==='fav'">
+                    <div v-if="!favList.length" class="empty">还没有收藏</div>
+                    <article v-for="n in favList" :key="n.id" class="news-card" @click="openDetail(n.id)">
+                        <div class="news-body">
+                            <h3>{{ n.title }}</h3>
+                            <div class="meta"><span>{{ n.author }}</span></div>
+                        </div>
+                    </article>
+                </template>
+                <template v-else-if="mineTab==='history'">
+                    <div v-if="!historyList.length" class="empty">暂无浏览记录</div>
+                    <article v-for="n in historyList" :key="n.id" class="news-card" @click="openDetail(n.id)">
+                        <div class="news-body">
+                            <h3>{{ n.title }}</h3>
+                            <div class="meta"><span>{{ n.author }}</span><span>{{ fmtTime(n.viewTime || n.publishTime)
+                                    }}</span></div>
+                        </div>
+                    </article>
+                </template>
+                <template v-else>
+                    <div class="src-add">
+                        <input v-model="srcForm.name" placeholder="源名称,如 比特币资讯">
+                        <input v-model="srcForm.url" placeholder="RSS地址,如 https://example.com/rss" style="flex:2">
+                        <select v-model="srcForm.category_id">
+                            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
+                        </select>
+                        <button @click="addSource">添加</button>
+                    </div>
+                    <div v-if="!sourceList.length" class="empty">暂无新闻源</div>
+                    <div v-for="s in sourceList" :key="s.id" class="src-item">
+                        <div>
+                            <b>{{ s.name }}</b>
+                            <span class="meta-inline">{{ s.url }}</span>
+                            <div class="meta-inline">最近抓取: {{ s.last_fetch_at ? fmtTime(s.last_fetch_at) : '从未' }}
+                                <em :class="s.enabled?'on':'off'">{{ s.enabled?'启用':'停用' }}</em>
+                            </div>
+                        </div>
+                        <div class="src-ops">
+                            <button @click="fetchSource(s.id)">立即抓取</button>
+                            <button class="danger" @click="delSource(s.id)">删除</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </main>
+
+        <!-- 登录/注册弹窗 -->
+        <div v-if="showLogin" class="mask" @click.self="showLogin=false">
+            <div class="login-modal">
+                <div class="login-tabs">
+                    <a :class="{active: loginMode==='login'}" @click="loginMode='login'">登录</a>
+                    <a :class="{active: loginMode==='register'}" @click="loginMode='register'">注册</a>
+                </div>
+                <input v-model="loginForm.username" placeholder="用户名">
+                <input v-model="loginForm.password" type="password" placeholder="密码(至少6位)" @keyup.enter="submitLogin">
+                <button class="btn-primary" @click="submitLogin">{{ loginMode==='login'?'登 录':'注 册' }}</button>
+                <p class="login-err" v-if="loginErr">{{ loginErr }}</p>
+            </div>
+        </div>
+
+        <!-- Toast -->
+        <div v-if="toast" class="toast">{{ toast }}</div>
+    </div>
+
+    <script src="/app.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,17 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.pytest_cache/
+*.egg-info/
+
+# 环境变量与密钥（绝不提交）
+.env
+
+# IDE
+.idea/
+.vscode/
+
+# 系统文件
+Thumbs.db
+.DS_Store
